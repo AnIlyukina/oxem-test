@@ -46,7 +46,7 @@ export const defaultParamsCalculator = {
 
         return this.maxInitialPercent;
       } else {
-        
+
         return value;
       }
     },

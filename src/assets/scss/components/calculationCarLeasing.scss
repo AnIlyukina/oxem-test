@@ -136,13 +136,15 @@
       background-color: $bottomBackgroundDisabled;
     }
   }
-
-  &__button:hover {
-    background-color: $bottomBackgroundHover;
+  &__button:hover:disabled {
     &.disabled {
       background-color: $bottomBackgroundDisabled;
       cursor: default;
     }
+  }
+
+  &__button:hover {
+    background-color: $bottomBackgroundHover;
   }
   &__button:active {
     background-color: $bottomBackgroundPressed;

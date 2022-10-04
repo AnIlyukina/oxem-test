@@ -131,8 +131,8 @@
       <div class="calculator__element">
         <button
           class='calculator__button disabled'
-          :disabled="isAllDisabled || !isSendCalcData"
-          @click.prevent="sendCalcData"
+          :disabled="isAllDisabled || isNoSendCalcData"
+          @click="sendCalcData"
         >
           <span v-if="!loading"> Оставить заявку </span>
 
@@ -176,15 +176,15 @@ export default {
       termLease: 0,
       loading: false,
       isAllDisabled: false,
-      activeInput: false,
       errorMessage: "",
-      successMessage: ""
+      successMessage: "",
+      isValidPriceCar: true
     };
   },
   mixins: [defaultParamsCalculator],
   computed: {
-    isSendCalcData () {
-      return this.sumLeasing !== 0 && this.monthPay !== 0 && !this.activeInput;
+    isNoSendCalcData () {
+      return this.sumLeasing === 0 || this.monthPay === 0 || !this.isValidPriceCar;
     },
     sumLeasing() {
       if (this.initialPay >= 1000) {
@@ -211,6 +211,7 @@ export default {
     priceCar(value) {
       if (value) {
         this.priceCarInput  = value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        this.isValidPriceCar = (value < this.minPriceCar || value > this.maxPriceCar) ? false : true
         this.initialPay = Math.round((value * this.initialPercent) / 100);
       }
     },
@@ -273,7 +274,6 @@ export default {
       if (e.target.id === 'initialPay') {
         this.initialPay = this.initialPercent;
       }
-      this.activeInput = true
       e.target.closest(".calculator__input-block").classList.add("active");
     },
 
@@ -281,11 +281,11 @@ export default {
       if (e.target.id === 'initialPay' &&  this.initialPay === this.initialPercent) {
         this.calcInitialPay()
       }
-      this.activeInput = false
       e.target.closest(".calculator__input-block").classList.remove("active");
     },
 
     async sendCalcData() {
+      if (!this.isAllDisabled && !this.isNoSendCalcData) {
       const data = {
         priceCar: this.priceCar,
         termLease: this.termLease,
@@ -311,6 +311,7 @@ export default {
         this.errorMessage = "Что-то пошло не так, попробуйте позже";
       } finally {
         this.loading = false;
+      }
       }
     },
     updateCalc() {
