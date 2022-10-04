@@ -3,46 +3,65 @@
     <h1 class="calculator__title">Рассчитайте стоимость автомобиля в лизинг</h1>
     <div class="calculator__fields-elements">
       <div
-        class='calculator__element calculator__element_type_field'
+        :class="[
+          disabled ? 'calculator__element_type_field disabled' : '',
+          'calculator__element calculator__element_type_field',
+        ]"
       >
         <label for="priceCar" class="calculator__label">
           Стоимость автомобиля
         </label>
-        <div class="calculator__input-block">
+        <div class="calculator__input-block" @click="onFocusInput">
           <input
-            v-model="priceCar"
+            v-model="priceCarInput"
             class="calculator__input"
             id="priceCar"
             type="text"
             placeholder="Введите стоимость машины"
             autocomplete="off"
+            :disabled="disabled"
+            @keyup.enter="onBlurInput"
+            @focus="setActiveClass"
+            @blur="deleteActiveClass"
+            @input="formatPriceCarInput"
+            @change="changePriceCar"
           />
           ₽
           <input
             v-model="priceCar"
             type="range"
-            class="e-range"
             :min="minPriceCar"
             :max="maxPriceCar"
+            :disabled="disabled"
+            class="e-range"
           />
         </div>
       </div>
       <div
-        class='calculator__element calculator__element_type_field'
+        :class="[
+          disabled ? 'calculator__element_type_field disabled' : '',
+          'calculator__element calculator__element_type_field',
+        ]"
       >
         <label for="initialPay" class="calculator__label">
           Первоначальный взнос
         </label>
         <div
           class="calculator__input-block calculator__input-block_type_payment"
+          @click="onFocusInput"
         >
           <input
-            v-model="initialPay"
+            v-model="initialPayInput"
             class="calculator__input"
             id="initialPay"
             type="text"
             placeholder="Введите процент взноса"
             autocomplete="off"
+            :disabled="disabled"
+            @keyup.enter="onBlurInput"
+            @focus="setActiveClass"
+            @blur="deleteActiveClass"
+            @change="changeInitialPayment"
           />
           <input
             v-model="initialPercent"
@@ -50,15 +69,20 @@
             type="range"
             :min="minInitialPercent"
             :max="maxInitialPercent"
+            :disabled="disabled"
+            @input="changeInitialPayment"
           />
           <div class="calculator__init-block">{{ initialPercent }}%</div>
         </div>
       </div>
       <div
-      class='calculator__element calculator__element_type_field'
+        :class="[
+          disabled ? 'calculator__element_type_field disabled' : '',
+          'calculator__element calculator__element_type_field',
+        ]"
       >
         <label for="termLease" class="calculator__label"> Срок лизинга </label>
-        <div class="calculator__input-block">
+        <div class="calculator__input-block" @click="onFocusInput">
           <input
             v-model="termLease"
             class="calculator__input"
@@ -66,6 +90,11 @@
             type="number"
             placeholder="Введите срок лизинга"
             autocomplete="off"
+            :disabled="disabled"
+            @keyup.enter="onBlurInput"
+            @focus="setActiveClass"
+            @blur="deleteActiveClass"
+            @change="changeTermLease"
           />
           мес.
           <input
@@ -74,6 +103,7 @@
             type="range"
             :min="minTermLease"
             :max="maxTermLease"
+            :disabled="disabled"
           />
         </div>
       </div>
@@ -85,14 +115,15 @@
       </div>
       <div class="calculator__element">
         <h5 class="calculator__label">Ежемесячный платеж от</h5>
-        <div class="calculator__values"> {{ monthPay.toLocaleString() }} ₽ </div>
+        <div class="calculator__values">{{ monthPay.toLocaleString() }} ₽</div>
       </div>
       <div class="calculator__element">
         <button
           :class="[
-            disabled ? 'calculator__button disabled' : '',
+            disabled || disabledButton ? 'calculator__button disabled' : '',
             'calculator__button ',
           ]"
+          :disabled="disabled || disabledButton"
           @click.prevent="sendCalcData"
         >
           <span v-if="!loading"> Оставить заявку </span>
@@ -100,12 +131,25 @@
         </button>
       </div>
     </div>
+    <div v-if="successMessage" class="calculator__success">
+      <p class="calculator__success-message">
+        {{ successMessage }}
+      </p>
+      <a class="calculator__link" href="#" @click.prevent="updateCalc">
+        Рассчитать стоимость для другого автомобиля
+      </a>
+    </div>
+    <div v-if="errorMessage" >
+      <p class="calculator__success">
+        {{ errorMessage }}
+      </p>
+    </div>
   </div>
 </template>
 
 <script>
 
-import { sendCalcDataFetch } from '../fetch'
+import { sendCalcData } from "../fetch";
 
 export default {
   name: "CalculationCarLising",
@@ -115,24 +159,28 @@ export default {
       defaultTermLease: 60,
       defaultInitialPercent: 13,
       percentRate: 3.5,
-      priceCar: 0,
-      initialPay: 0,
-      initialPercent: 0,
-      termLease: 0,
       minPriceCar: 1000000,
       maxPriceCar: 6000000,
       minInitialPercent: 10,
       maxInitialPercent: 60,
       minTermLease: 1,
       maxTermLease: 60,
+      priceCar: 0,
+      priceCarInput: '',
+      initialPay: 0,
+      initialPayInput: '',
+      initialPercent: 0,
+      termLease: 0,
       loading: false,
       disabled: false,
       errorMessage: "",
       successMessage: ""
-     
     };
   },
   computed: {
+    disabledButton() {
+      return this.sumLeasing === 0 || this.monthPay === 0;
+    },
     sumLeasing() {
       if (this.initialPay >= 1000) {
         let sum = this.initialPay + this.termLease * this.monthPay;
@@ -151,23 +199,112 @@ export default {
       return roundPay === Infinity || this.initialPercent < 1 ? 0 : roundPay;
     },
   },
+  watch: {
+    priceCar(value) {
+      if (value) {
+        this.priceCarInput  = value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        this.initialPay = Math.round((value * this.initialPercent) / 100);
+      }
+    },
+    priceCarInput(value) {
+      this.priceCarInput = value.replace(/[^0-9 \s]/g, "");
+    },
+    initialPay (value) {
+      this.initialPayInput = value <= this.maxInitialPercent ? value.toString() : value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + ' ₽'
+    },
+    initialPayInput (value) {
+      this.initialPayInput = value.replace(/[^0-9,₽ \s]/g, "");
+    }
+
+  },
   created() {
     this.setDefaultParams();
   },
   methods: {
+    onFocusInput (event) {
+      let inputBlock = event.target.closest('.calculator__input-block')
+      if (inputBlock && event.target.className !== 'e-range') {
+        let input = inputBlock.querySelector('.calculator__input')
+        input.focus();
+      }
+    },
+    changePriceCar(event) {
+      let value = event.target.value
+      let formattedValue = Number(value.replace(/\s/g, ''));
+      this.priceCar = this.checkPriceCarValue(formattedValue)
+    },
+    formatPriceCarInput (e) {
+      let number = e.target.value.replace(/[^0-9]/g, "").replace(/\s/g, '');
+      this.priceCar = Number(number)
+    },
+    changeTermLease(event) {
+      let value = event.target.value
+      this.termLease = this.checkTermLeaseValue(value);
+    },
+    calcInitialPay () {
+      this.initialPay = Math.round(
+        (this.priceCar * this.initialPercent) / 100
+      );
+    },
+    onBlurInput (event) {
+      event.target.blur()
+    },
     setDefaultParams() {
       this.priceCar = this.defaultPriceCar;
       this.termLease = this.defaultTermLease;
       this.initialPercent = this.defaultInitialPercent;
       this.calcInitialPay()
     },
-    calcInitialPay () {
-        this.initialPay = Math.round(
-          (this.priceCar * this.initialPercent) / 100
-        );
-      },
+
+    changeInitialPayment(event) {
+      let value = event.target.value
+      console.log(this.checkInitialPaymentValue(value))
+      this.initialPercent = this.checkInitialPaymentValue(value)
+      this.calcInitialPay()
+    },
+    checkPriceCarValue (value) {
+      if (value < this.minPriceCar) {
+          return  this.minPriceCar;
+      } else if (value > this.maxPriceCar) {
+          return this.maxPriceCar;
+      }  else {
+          return value
+      }
+    },
+    checkTermLeaseValue (value) {
+      if (value < this.minTermLease) {
+          return this.minTermLease;
+      } else if (value > this.maxTermLease) {
+          return this.maxTermLease;
+      } else {
+          return value
+      }
+    },
+    checkInitialPaymentValue (value) {
+        if (this.minInitialPercent > value) {
+            return this.minInitialPercent;
+        } else if (value > this.maxInitialPercent) {
+            return this.maxInitialPercent;
+        } else {
+            return value
+        }
+    },
+
+    setActiveClass(e) {
+      if (e.target.id === 'initialPay') {
+        this.initialPay = this.initialPercent;
+      }
+      e.target.closest(".calculator__input-block").classList.add("active");
+    },
+
+    deleteActiveClass(e) {
+      if (e.target.id === 'initialPay' &&  this.initialPay == this.initialPercent) {
+        this.calcInitialPay()
+      }
+      e.target.closest(".calculator__input-block").classList.remove("active");
+    },
+
     async sendCalcData() {
-      console.log('sx')
       let data = {
         priceCar: this.priceCar,
         termLease: this.termLease,
@@ -175,13 +312,12 @@ export default {
         sumLeasing: this.sumLeasing,
         monthPay: this.monthPay,
       };
-      console.log(data)
       this.loading = true;
       this.disabled = true;
       this.errorMessage = "";
 
       try {
-        const response = await sendCalcDataFetch(data);
+        const response = await sendCalcData(data);
 
         if (response.status === 200) {
           this.successMessage = "Ваши данные успешно отправлены  ";
@@ -196,9 +332,12 @@ export default {
         this.loading = false;
       }
     },
+    updateCalc() {
+      this.disabled = false;
+      this.setDefaultParams();
+      this.successMessage = "";
+    },
   },
-
-  
 };
 </script>
 
