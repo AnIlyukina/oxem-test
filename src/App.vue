@@ -1,16 +1,16 @@
 <template>
   <div id="app">
-    <CalculationCarLising />
+    <CalculationCarLeasing />
   </div>
 </template>
 
 <script>
-import CalculationCarLising from "./components/CalculationCarLising";
+import CalculationCarLeasing from "@/components/CalculationCarLeasing";
 export default {
   name: "App",
 
   components: {
-    CalculationCarLising,
+    CalculationCarLeasing,
   },
 };
 </script>

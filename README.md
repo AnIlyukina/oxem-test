@@ -1,12 +1,11 @@
 # oxem-test
 
-## Запуcк проекта:
+## Project setup
 ```
 npm install
 npm run serve
 ```
 
-### Ссылка на приложение
 ```
-https://oxen-test.web.app
+Посмотреть: [Ссылка на приложение](https://oxen-test.web.app).
 ```
